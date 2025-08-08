@@ -171,7 +171,7 @@ body {
   background-image: url("/assets/images/body-bg.jpg");
   background-repeat: repeat;
   color: var(--text-gainsboro);
-  font-family: var(--fontFamily-oxanium);
+  font-family: var(--font-oxanium), var(--fontFamily-oxanium);
   font-size: var(--fontSize-4);
   font-weight: var(--weight-regular);
   line-height: 1.6;
@@ -267,6 +267,37 @@ body {
 .btn:is(:hover, :focus-visible)::before { transform: translate(-50%, -50%) scale(1); }
 
 .w-100 { width: 100%; }
+
+/* Utility classes for custom colors */
+.text-purple { color: var(--text-purple); }
+.text-white { color: var(--text-white); }
+.text-gainsboro { color: var(--text-gainsboro); }
+.text-champagne-pink { color: var(--text-champagne-pink); }
+
+.bg-purple { background-color: var(--bg-purple); }
+.bg-dark-purple { background-color: var(--bg-dark-purple); }
+.bg-oxford-blue { background-color: var(--bg-oxford-blue); }
+.bg-oxford-blue-alpha-90 { background-color: var(--bg-oxford-blue-alpha-90); }
+.bg-oxford-blue-alpha-80 { background-color: var(--bg-oxford-blue-alpha-80); }
+.bg-purple-alpha-30 { background-color: var(--bg-purple-alpha-30); }
+
+.border-purple { border-color: var(--bg-purple); }
+.border-purple-alpha-30 { border-color: var(--border-purple-alpha-30); }
+
+/* Line clamp utilities */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 
 .section { padding-block: var(--section-spacing); }
 

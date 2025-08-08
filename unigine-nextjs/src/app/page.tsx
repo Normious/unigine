@@ -1,10 +1,21 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import TournamentCard from "@/components/tournaments/TournamentCard";
+import MatchCard from "@/components/matches/MatchCard";
+import NewsCard from "@/components/news/NewsCard";
+import Link from "next/link";
 
 export default function Home() {
+  const [upcomingTournaments, setUpcomingTournaments] = useState([]);
+  const [liveMatches, setLiveMatches] = useState([]);
+  const [latestNews, setLatestNews] = useState([]);
+
   useEffect(() => {
+    fetchHomeData();
+    
     const script = document.createElement("script");
     script.src = "/assets/js/script.js";
     script.async = true;
@@ -27,76 +38,63 @@ export default function Home() {
     };
   }, []);
 
+  const fetchHomeData = async () => {
+    try {
+      // Fetch upcoming tournaments
+      const { data: tournaments } = await supabase
+        .from('tournaments')
+        .select('*')
+        .eq('status', 'upcoming')
+        .order('start_date', { ascending: true })
+        .limit(3);
+
+      // Fetch live matches
+      const { data: matches } = await supabase
+        .from('matches')
+        .select(`
+          *,
+          tournament:tournaments(name),
+          team1:teams!matches_team1_id_fkey(name, logo_url),
+          team2:teams!matches_team2_id_fkey(name, logo_url)
+        `)
+        .in('status', ['live', 'scheduled'])
+        .order('scheduled_time', { ascending: true })
+        .limit(4);
+
+      // Fetch latest news
+      const { data: news } = await supabase
+        .from('news')
+        .select(`
+          *,
+          author:profiles!news_author_id_fkey(username, full_name)
+        `)
+        .eq('published', true)
+        .order('published_at', { ascending: false })
+        .limit(3);
+
+      setUpcomingTournaments(tournaments || []);
+      setLiveMatches(matches || []);
+      setLatestNews(news || []);
+    } catch (error) {
+      console.error('Error fetching home data:', error);
+    }
+  };
+
   return (
     <>
-      <header className="header active" data-header>
-        <div className="container">
-          <a href="#" className="logo">
-            <Image
-              src="/assets/images/logo.svg"
-              width="110"
-              height="53"
-              alt="unigine home"
-            />
-          </a>
-
-          <nav className="navbar" data-navbar>
-            <ul className="navbar-list">
-              <li className="navbar-item">
-                <a href="#home" className="navbar-link" data-nav-link>
-                  home
-                </a>
-              </li>
-
-              <li className="navbar-item">
-                <a href="#tournament" className="navbar-link" data-nav-link>
-                  tournament
-                </a>
-              </li>
-
-              <li className="navbar-item">
-                <a href="#news" className="navbar-link" data-nav-link>
-                  news
-                </a>
-              </li>
-
-              <li className="navbar-item">
-                <a href="#" className="navbar-link" data-nav-link>
-                  contact
-                </a>
-              </li>
-            </ul>
-          </nav>
-
-          <a href="#" className="btn" data-btn>
-            join our team
-          </a>
-
-          <button
-            className="nav-toggle-btn"
-            aria-label="toggle menu"
-            data-nav-toggler
-          >
-            <span className="line line-1"></span>
-            <span className="line line-2"></span>
-            <span className="line line-3"></span>
-          </button>
-        </div>
-      </header>
-
       <main>
         <article>
           <div className="hero has-before" id="home">
-            <div className="container">
+            <div className="container mx-auto px-4">
               <p className="section-subtitle">Enjoy The Games</p>
 
               <h1 className="h1 title hero-title">
                 Epic Games Made For <br /> True Gamers!
               </h1>
 
-              <a href="#" className="btn" data-btn>
+              <Link href="/tournaments" className="btn" data-btn>
                 Join With Us
-              </a>
+              </Link>
 
               <div className="hero-banner">
                 <Image
@@ -118,12 +116,36 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Live Matches Section */}
+          {liveMatches.length > 0 && (
+            <section className="section" id="live-matches">
+              <div className="container mx-auto px-4">
+                <p className="section-subtitle" data-reveal="bottom">
+                  Live Now
+                </p>
+                <h2 className="h2 section-title" data-reveal="bottom">
+                  Current <span className="span">Matches</span>
+                </h2>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                  {liveMatches.map((match) => (
+                    <MatchCard key={match.id} match={match} />
+                  ))}
+                </div>
+                <div className="text-center">
+                  <Link href="/matches" className="btn">
+                    View All Matches
+                  </Link>
+                </div>
+              </div>
+            </section>
+          )}
+
           <section
             className="section upcoming"
             aria-labelledby="upcoming-label"
             id="tournament"
           >
-            <div className="container">
+            <div className="container mx-auto px-4">
               <p
                 className="section-subtitle"
                 id="upcoming-label"
@@ -141,6 +163,14 @@ export default function Home() {
                 Our success in creating business solutions is due in large part
                 to our talented and highly committed team.
               </p>
+
+              {upcomingTournaments.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                  {upcomingTournaments.map((tournament) => (
+                    <TournamentCard key={tournament.id} tournament={tournament} />
+                  ))}
+                </div>
+              )}
 
               <ol className="upcoming-list">
                 <li className="upcoming-item">
@@ -317,11 +347,17 @@ export default function Home() {
                   </div>
                 </li>
               </ol>
+
+              <div className="text-center mt-12">
+                <Link href="/tournaments" className="btn">
+                  View All Tournaments
+                </Link>
+              </div>
             </div>
           </section>
 
           <section className="section news" aria-label="our latest news" id="news">
-            <div className="container">
+            <div className="container mx-auto px-4">
               <p className="section-subtitle" data-reveal="bottom">
                 What's On Our Mind
               </p>
@@ -334,6 +370,14 @@ export default function Home() {
                 Our success in creating business solutions is due in large part
                 to our talented and highly committed team.
               </p>
+
+              {latestNews.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                  {latestNews.map((article) => (
+                    <NewsCard key={article.id} article={article} />
+                  ))}
+                </div>
+              )}
 
               <ul className="news-list">
                 <li data-reveal="bottom">
@@ -519,163 +563,16 @@ export default function Home() {
                   </div>
                 </li>
               </ul>
+
+              <div className="text-center mt-12">
+                <Link href="/news" className="btn">
+                  Read More News
+                </Link>
+              </div>
             </div>
           </section>
         </article>
       </main>
-
-      <footer className="footer">
-        <div className="section footer-top">
-          <div className="container">
-            <div className="footer-brand">
-              <a href="#" className="logo">
-                <Image
-                  src="/assets/images/logo.svg"
-                  width="150"
-                  height="73"
-                  loading="lazy"
-                  alt="Unigine logo"
-                />
-              </a>
-
-              <p className="footer-text">
-                Our success in creating business solutions is due in large part
-                to our talented and highly committed team.
-              </p>
-
-              <ul className="social-list">
-                <li>
-                  <a href="#" className="social-link">
-                    <ion-icon name="logo-facebook"></ion-icon>
-                  </a>
-                </li>
-
-                <li>
-                  <a href="#" className="social-link">
-                    <ion-icon name="logo-twitter"></ion-icon>
-                  </a>
-                </li>
-
-                <li>
-                  <a href="#" className="social-link">
-                    <ion-icon name="logo-instagram"></ion-icon>
-                  </a>
-                </li>
-
-                <li>
-                  <a href="#" className="social-link">
-                    <ion-icon name="logo-youtube"></ion-icon>
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            <div className="footer-list">
-              <p className="title footer-list-title has-after">Usefull Links</p>
-
-              <ul>
-                <li>
-                  <a href="#" className="footer-link">
-                    Tournaments
-                  </a>
-                </li>
-
-                <li>
-                  <a href="#" className="footer-link">
-                    Help Center
-                  </a>
-                </li>
-
-                <li>
-                  <a href="#" className="footer-link">
-                    Privacy and Policy
-                  </a>
-                </li>
-
-                <li>
-                  <a href="#" className="footer-link">
-                    Terms of Use
-                  </a>
-                </li>
-
-                <li>
-                  <a href="#" className="footer-link">
-                    Contact Us
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            <div className="footer-list">
-              <p className="title footer-list-title has-after">Contact Us</p>
-
-              <div className="contact-item">
-                <span className="span">Location:</span>
-
-                <address className="contact-link">
-                  153 Williamson Plaza, Maggieberg, MT 09514
-                </address>
-              </div>
-
-              <div className="contact-item">
-                <span className="span">Join Us:</span>
-
-                <a href="mailto:Info@unigine.com" className="contact-link">
-                  Info@unigine.com
-                </a>
-              </div>
-
-              <div className="contact-item">
-                <span className="span">Phone:</span>
-
-                <a href="tel:+12345678910" className="contact-link">
-                  +1 (234) 567-8910
-                </a>
-              </div>
-            </div>
-
-            <div className="footer-list">
-              <p className="title footer-list-title has-after">
-                Newsletter Signup
-              </p>
-
-              <form action="./index.html" method="get" className="footer-form">
-                <input
-                  type="email"
-                  name="email_address"
-                  required
-                  placeholder="Your Email"
-                  autoComplete="off"
-                  className="input-field"
-                />
-
-                <button type="submit" className="btn" data-btn>
-                  Subscribe Now
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-
-        <div className="footer-bottom">
-          <div className="container">
-            <p className="copyright">
-              &copy; 2022 codewithsadee All Rights Reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
-
-      <a
-        href="#top"
-        className="back-top-btn"
-        aria-label="back to top"
-        data-back-top-btn
-      >
-        <ion-icon name="arrow-up-outline" aria-hidden="true"></ion-icon>
-      </a>
-
-      <div className="cursor" data-cursor></div>
     </>
   );
 }
